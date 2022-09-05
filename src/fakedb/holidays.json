@@ -1,0 +1,39 @@
+{
+    "code":200,
+    "errors":[],
+    "data":[
+        {
+            "Id": 1,
+            "DayOfWeek": "Monday",
+            "Date": "01-Aug-22",
+            "Holiday": "Holiday 1"
+        },
+        {
+            "Id": 2,
+            "DayOfWeek": "Tuesday",
+            "Date": "02-Aug-22",
+            "Holiday": "Holiday 2"
+        },
+        {
+            "Id": 3,
+            "DayOfWeek": "Wednesday",
+            "Date": "03-Aug-22",
+            "Holiday": "Holiday 3"
+        },
+        {
+            "Id": 4,
+            "DayOfWeek": "Thursday",
+            "Date": "04-Aug-22",
+            "Holiday": "Holiday 4"
+        },
+        {
+            "Id": 5,
+            "DayOfWeek": "Friday",
+            "Date": "05-Aug-22",
+            "Holiday": "Holiday 5"
+        }
+        
+    ],
+    "message":"data fetched successfully"
+}
+

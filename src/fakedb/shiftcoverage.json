@@ -1,0 +1,65 @@
+{
+    "code":200,
+    "errors":[],
+    "data":[
+        {
+            "Id": 1,
+            "Module": "MM",
+            "NoOfResources": "1.5",
+            "Shift1ResourceName": "Ankush",
+            "Shift1Timing": "11:00 to 20:00",
+            "Shift2ResourceName": "Rakesh",
+            "Shift2Timing": "12:00 to 21:00",
+            "Shift3ResourceName": "Mukesh",
+            "Shift3Timing": "10:00 to 17:00"
+
+        },
+        {
+            "Id": 2,
+            "Module": "SRM",
+            "NoOfResources": "0.5",
+            "Shift1ResourceName": "Ankush",
+            "Shift1Timing": "11:00 to 20:00",
+            "Shift2ResourceName": "Rakesh",
+            "Shift2Timing": "12:00 to 21:00",
+            "Shift3ResourceName": "Mukesh",
+            "Shift3Timing": "10:00 to 17:00"
+        },
+        {
+            "Id": 3,
+            "Module": "SD",
+            "NoOfResources": "2",
+            "Shift1ResourceName": "Ankush",
+            "Shift1Timing": "11:00 to 20:00",
+            "Shift2ResourceName": "Rakesh",
+            "Shift2Timing": "12:00 to 21:00",
+            "Shift3ResourceName": "Mukesh",
+            "Shift3Timing": "10:00 to 17:00"
+        },
+        {
+            "Id": 4,
+            "Module": "PP/QM",
+            "NoOfResources": "1",
+            "Shift1ResourceName": "Ankush",
+            "Shift1Timing": "11:00 to 20:00",
+            "Shift2ResourceName": "Rakesh",
+            "Shift2Timing": "12:00 to 21:00",
+            "Shift3ResourceName": "Mukesh",
+            "Shift3Timing": "10:00 to 17:00"
+        },
+        {
+            "Id": 5,
+            "Module": "PM",
+            "NoOfResources": "0.5",
+            "Shift1ResourceName": "Ankush",
+            "Shift1Timing": "11:00 to 20:00",
+            "Shift2ResourceName": "Rakesh",
+            "Shift2Timing": "12:00 to 21:00",
+            "Shift3ResourceName": "Mukesh",
+            "Shift3Timing": "10:00 to 17:00"
+        }
+        
+    ],
+    "message":"data fetched successfully"
+}
+

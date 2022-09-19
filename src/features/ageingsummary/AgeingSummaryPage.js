@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Container from '@mui/material/Container';
+import getRandomColor from "../../common/ColorGenerator";
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import { Copyright } from '../../components/Copyright';
@@ -11,10 +12,42 @@ import moment from 'moment'
 import _ from 'lodash';
 import { DataGrid, GridToolbar, gridClasses } from '@mui/x-data-grid';
 import { alpha, styled } from '@mui/material/styles';
+import { Bar, Pie } from 'react-chartjs-2';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
+    ArcElement
+} from 'chart.js';
 
-
-
+ChartJS.register(
+    ArcElement,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend
+);
 const ODD_OPACITY = 0.2;
+
+export const ageingmorethan10_options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            position: 'top',
+        },
+        title: {
+            display: true,
+            text: 'Ageing > 10 Days',
+        },
+    },
+};
 
 const StripedDataGrid = styled(DataGrid)(({ theme }) => ({
     [`& .${gridClasses.row}.even`]: {
@@ -55,6 +88,7 @@ export default function AgeingSummaryPage() {
     const [dataList, setDataList] = useState([]);
     const [ageingSummary, setAgeingSummary] = useState([]);
     const { loading, errors, list } = useSelector((state) => state.ageingsummary)
+    const [ageingMoreThan10Days, setAgeingMoreThan10Days] = useState({});
 
     useEffect(() => {
         dispatch(getAllData());
@@ -66,15 +100,41 @@ export default function AgeingSummaryPage() {
         let newData = newList.map((item) =>
             Object.assign({}, item, {
                 Month: moment(new Date(item.Opened)).format("MMMM"),
+                OpenedMonth: moment(new Date(item.Opened)).format("MMMM"),
+                ResolvedMonth: moment(new Date(item.Resolved)).format("MMMM"),
                 Ageing: moment(new Date()).diff(new Date(item.Opened), 'days')
             })
         );
         setDataList(newData);
         var sortedList = _.sortBy(newData, [function (o) { return new Date(o.Opened); }]);
         AgeingSummary(sortedList);
+        getAgeingChartDataMoreThan10Days(sortedList);
     }, [list]);
 
+    function getAgeingChartDataMoreThan10Days(sortedArray) {
 
+        var ageingmorethan10days = _(sortedArray).groupBy('Assignmentgroup')
+            .map(function (items, Assignmentgroup) {
+                var counts = items.filter(m => m.Ageing > 10 && m.State !== "Closed").length;
+                return { assignmentgroup: Assignmentgroup, count: counts };
+            }).value();
+
+
+        var labels = ageingmorethan10days.map(function (el) { return el.assignmentgroup; });
+        var new_data = ageingmorethan10days.map(function (el) { return el.count; });
+        let graphData = {
+            labels: labels,
+            datasets: [
+                {
+                    label: "Ageing >10 Days",
+                    data: new_data,
+                    backgroundColor: getRandomColor(new_data.length)
+                }
+            ]
+        }
+        setAgeingMoreThan10Days(graphData);
+
+    }
 
     function AgeingSummary(sortedArray) {
         var filtered = sortedArray.filter(m => m.Ageing > 10);
@@ -142,8 +202,23 @@ export default function AgeingSummaryPage() {
                             }}
                         >
                             <Grid item sx={{ display: 'flex', justifyContent: 'center' }} xs={12} md={12} lg={12}>
-                                <Typography component={"p"} sx={{ fontSize: '25px' }}>{"Details of Ageing Tickets (> 10 Days)"}</Typography>
+                                <Typography component={"p"} sx={{ fontSize: '25px',marginBottom:'20px' }}>{"Details of Ageing Tickets (> 10 Days)"}</Typography>
                             </Grid>
+                            <Grid sx={{marginBottom:'20px'}} item xs={12} md={12} lg={12}>
+                            <Paper
+                                sx={{
+                                    p: 2,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    height: 300
+
+                                }}
+                            >
+                                {!_.isEmpty(ageingMoreThan10Days) && <Pie options={ageingmorethan10_options} data={ageingMoreThan10Days} />}
+
+                            </Paper>
+                            
+                        </Grid>
                             <Grid item xs={12} md={12} lg={12}>
                                 <StripedDataGrid sx={{ flex: 1, minHeight: '500px' }} autoHeight={false} getRowClassName={(params) =>
                                     params.indexRelativeToCurrentPage % 2 === 0 ? 'even' : 'odd'

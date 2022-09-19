@@ -585,7 +585,7 @@ export default function DashboardPage() {
                             </Box>
                         </Grid>
                     </Grid>
-                    <Grid container spacing={3}>
+                    {/* <Grid container spacing={3}>
                         <Grid item xs={12} md={6} lg={6}>
                             <Paper
                                 sx={{
@@ -620,7 +620,7 @@ export default function DashboardPage() {
                                 <Link to="/ageingsummary0to5">Show more</Link>
                             </Box>
                         </Grid>
-                    </Grid>
+                    </Grid> */}
                     <Grid container spacing={3}>
                     <Grid item xs={12} md={12} lg={12}>
                             <Paper

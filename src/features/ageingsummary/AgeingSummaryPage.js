@@ -89,7 +89,7 @@ export default function AgeingSummaryPage() {
             field: 'State', headerName: 'State', flex: 1, headerClassName: 'super-app-theme--header'
         },
         {
-            field: 'Type', headerName: 'Priority', flex: 1, headerClassName: 'super-app-theme--header'
+            field: 'Priority', headerName: 'Priority', flex: 1, headerClassName: 'super-app-theme--header'
         },
         {
             field: 'Shortdescription', headerName: 'Short description', width: 200, headerClassName: 'super-app-theme--header'

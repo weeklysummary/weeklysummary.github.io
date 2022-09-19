@@ -62,17 +62,35 @@ export default function TeamPerformancePage() {
         let newData = newList.map((item) =>
             Object.assign({}, item, {
                 Month: moment(new Date(item.Opened)).format("MMMM"),
+                OpenedMonth: moment(new Date(item.Opened)).format("MMMM"),
+                ResolvedMonth: moment(new Date(item.Resolved)).format("MMMM"),
                 Ageing: moment(new Date()).diff(new Date(item.Opened), 'days')
             })
         );
         var sortedList = _.sortBy(newData, [function (o) { return new Date(o.Opened); }]);
-        var newStateList = _(sortedList).groupBy('Month')
+        var sortedResolvedList = _.sortBy(newData, [function (o) { return new Date(o.Resolved); }]);
+
+        var newStateList = _(sortedList).filter(m=>m.Opened!=="" && m.Company==="Deloitte").groupBy('OpenedMonth')
         .map(function (items, Month) {
-            let i = items.filter(m => m.State === "New");
-            let j = items.filter(m => m.State === "Closed");
-            return { month: Month, new: i.length,closed:j.length };
+            let i = items.filter(m => m.Opened !== "");
+            return { month: Month, count: i.length };
         }).value();
-        setTeamPerformance(newStateList);
+
+        var newStateResolvedList = _(sortedResolvedList).filter(m=>m.Resolved!=="" && m.Company==="Deloitte").groupBy('ResolvedMonth')
+        .map(function (items, Month) {
+            let i = items.filter(m => m.Opened !== "");
+            return { month: Month, count: i.length };
+        }).value();
+
+        var finalList=newStateList.map(function(item,index){
+            var itemIndex=newStateResolvedList.findIndex(m=>m.month===item.month);
+            return {month:item.month,new:item.count,closed:newStateResolvedList[itemIndex].count};
+        });
+
+
+
+
+        setTeamPerformance(finalList);
 
     }, [list]);
     const columns = [
@@ -80,10 +98,10 @@ export default function TeamPerformancePage() {
             field: 'month', headerName: 'Month', flex: 1, headerClassName: 'super-app-theme--header'
         },
         {
-            field: 'new', headerName: 'New', flex: 1, headerClassName: 'super-app-theme--header'
+            field: 'new', headerName: 'Created', flex: 1, headerClassName: 'super-app-theme--header'
         },
         {
-            field: 'closed', headerName: 'Closed', flex: 1, headerClassName: 'super-app-theme--header'
+            field: 'closed', headerName: 'Resolved', flex: 1, headerClassName: 'super-app-theme--header'
         }
     ];
 

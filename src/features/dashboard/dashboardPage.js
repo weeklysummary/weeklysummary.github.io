@@ -71,7 +71,7 @@ export const options = {
         },
         title: {
             display: true,
-            text: 'Deloitte Operate Team Performance – Month wise',
+            text: 'Deloitte Monthly Created Vs Resolved',
         },
     },
 };
@@ -84,7 +84,20 @@ export const deloitte_options = {
         },
         title: {
             display: true,
-            text: 'Deloitte',
+            text: 'Incoming Tickets - Deloitte',
+        },
+    },
+};
+export const deloitte_resolved_options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            position: 'top',
+        },
+        title: {
+            display: true,
+            text: 'Resolved Tickets - Deloitte',
         },
     },
 };
@@ -97,7 +110,20 @@ export const avient_options = {
         },
         title: {
             display: true,
-            text: 'Avient',
+            text: 'Incoming Tickets - Avient',
+        },
+    },
+};
+export const avient_resolved_options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            position: 'top',
+        },
+        title: {
+            display: true,
+            text: 'Resolved Tickets - Avient',
         },
     },
 };
@@ -146,7 +172,10 @@ export default function DashboardPage() {
     const [dataList, setDataList] = useState([]);
     const [graph1Data, setGraph1Data] = useState({});
     const [deloitteGraphData, setDeloitteGraphData] = useState({});
+    const [deloitteResolvedGraphData, setDeloitteResolvedGraphData] = useState({});
     const [avientGraphData, setAvientGraphData] = useState({});
+    const [avientResolvedGraphData, setAvientResolvedGraphData] = useState({});
+
     const [crSummary, setCRSummary] = useState([]);
     const [ageing0to5Days, setAgeing0to5Days] = useState({});
     const [ageing6to10Days, setAgeing6to10Days] = useState({});
@@ -164,14 +193,19 @@ export default function DashboardPage() {
         let newData = newList.map((item) =>
             Object.assign({}, item, {
                 Month: moment(new Date(item.Opened)).format("MMMM"),
+                OpenedMonth: moment(new Date(item.Opened)).format("MMMM"),
+                ResolvedMonth: moment(new Date(item.Resolved)).format("MMMM"),
                 Ageing: moment(new Date()).diff(new Date(item.Opened), 'days')
             })
         );
         setDataList(newData);
+        var sortedResolvedList = _.sortBy(newData, [function (o) { return new Date(o.Resolved); }]);
         var sortedList = _.sortBy(newData, [function (o) { return new Date(o.Opened); }]);
-        getMonthWiseChartData(sortedList);
+        getMonthWiseChartData(sortedResolvedList);
         getDeloitteChartData(sortedList);
+        getDeloitteResolvedChartData(sortedResolvedList);
         getAvientChartData(sortedList);
+        getAvientResolvedChartData(sortedList);
         getAgeingChartData0to5Days(sortedList);
         getAgeingChartData6to10Days(sortedList);
         getAgeingChartDataMoreThan10Days(sortedList);
@@ -249,33 +283,40 @@ export default function DashboardPage() {
     }
 
     function getMonthWiseChartData(sortedArray) {
-        var newStateList = _(sortedArray).groupBy('Month')
-            .map(function (items, Month) {
-                let i = items.filter(m => m.State === "New");
-                return { month: Month, count: i.length };
+        var newStateList = _(sortedArray).filter(m => m.Opened !== "" && m.Company === "Deloitte").groupBy('OpenedMonth')
+            .map(function (items, OpenedMonth) {
+                let i = items.filter(m => m.Opened !== "");
+                return { month: OpenedMonth, count: i.length };
             }).value();
 
-        var closedStateList = _(sortedArray)
-            .groupBy('Month')
-            .map(function (items, Month) {
-                let i = items.filter(m => m.State === "Closed");
-                return { month: Month, count: i.length };
+        var closedStateList = _(sortedArray).filter(m => m.Resolved !== "" && m.Company === "Deloitte")
+            .groupBy('ResolvedMonth')
+            .map(function (items, ResolvedMonth) {
+                let i = items.filter(m => m.Resolved !== "");
+                return { month: ResolvedMonth, count: i.length };
             }).value();
+
+        // var newBacklogList = _(sortedArray).filter(m => (m.Opened !== "" && m.Resolved==="") && m.Company === "Deloitte").groupBy('OpenedMonth')
+        //     .map(function (items, OpenedMonth) {
+        //         let i = items;
+        //         return { month: OpenedMonth, count: i.length };
+        //     }).value();
 
         var labels = closedStateList.map(function (el) { return el.month; });
         var new_data = newStateList.map(function (el) { return el.count; });
         var closed_data = closedStateList.map(function (el) { return el.count; });
+        //var backlog_data = newBacklogList.map(function (el) { return el.count; });
 
         let graphData = {
             labels: labels,
             datasets: [
                 {
-                    label: "New",
+                    label: "Created",
                     data: new_data,
                     backgroundColor: '#4574C4',
                 },
                 {
-                    label: "Closed",
+                    label: "Resolved",
                     data: closed_data,
                     backgroundColor: '#92d050',
                 }
@@ -285,10 +326,10 @@ export default function DashboardPage() {
     }
 
     function getDeloitteChartData(sortedArray) {
-        var deloitteList = _(sortedArray).groupBy('Month')
-            .map(function (items, Month) {
+        var deloitteList = _(sortedArray).filter(m=>m.Opened!=="").groupBy('OpenedMonth')
+            .map(function (items, OpenedMonth) {
                 let i = items.filter(m => m.Company === "Deloitte");
-                return { month: Month, count: i.length };
+                return { month: OpenedMonth, count: i.length };
             }).value();
 
         var labels = deloitteList.map(function (el) { return el.month; });
@@ -307,11 +348,35 @@ export default function DashboardPage() {
         }
         setDeloitteGraphData(graphData);
     }
+    function getDeloitteResolvedChartData(sortedArray) {
+        var deloitteList = _(sortedArray).filter(m=>m.Resolved!=="").groupBy('ResolvedMonth')
+            .map(function (items, ResolvedMonth) {
+                let i = items.filter(m => m.Company === "Deloitte");
+                return { month: ResolvedMonth, count: i.length };
+            }).value();
+
+        var labels = deloitteList.map(function (el) { return el.month; });
+        var data = deloitteList.map(function (el) { return el.count; });
+
+        let graphData = {
+            labels: labels,
+            datasets: [
+                {
+                    label: "Deloitte",
+                    data: data,
+                    backgroundColor: '#92d050',
+                },
+
+            ]
+        }
+        setDeloitteResolvedGraphData(graphData);
+    }
+
     function getAvientChartData(sortedArray) {
-        var avientList = _(sortedArray).groupBy('Month')
-            .map(function (items, Month) {
+        var avientList = _(sortedArray).filter(m=>m.Opened!=="").groupBy('OpenedMonth')
+            .map(function (items, OpenedMonth) {
                 let i = items.filter(m => m.Company === "Avient");
-                return { month: Month, count: i.length };
+                return { month: OpenedMonth, count: i.length };
             }).value();
 
         var labels = avientList.map(function (el) { return el.month; });
@@ -330,13 +395,37 @@ export default function DashboardPage() {
         }
         setAvientGraphData(graphData);
     }
+    function getAvientResolvedChartData(sortedArray) {
+        var avientList = _(sortedArray).filter(m=>m.Resolved!=="").groupBy('ResolvedMonth')
+            .map(function (items, ResolvedMonth) {
+                let i = items.filter(m => m.Company === "Avient");
+                return { month: ResolvedMonth, count: i.length };
+            }).value();
+
+        var labels = avientList.map(function (el) { return el.month; });
+        var data = avientList.map(function (el) { return el.count; });
+
+        let graphData = {
+            labels: labels,
+            datasets: [
+                {
+                    label: "Avient",
+                    data: data,
+                    backgroundColor: '#4574C4',
+                },
+
+            ]
+        }
+        setAvientResolvedGraphData(graphData);
+    }
 
     function CRSummary(sortedArray) {
-        var states = sortedArray.map(function (el) { return el.State; });
+        var filteredArray=sortedArray.filter(m=>m.Company==="Deloitte");
+        var states = filteredArray.map(function (el) { return el.State; });
         var uniqueStates = _.uniqBy(states, function (e) {
             return e;
         });
-        var crsummary = _(sortedArray).groupBy('Assignmentgroup')
+        var crsummary = _(filteredArray).groupBy('Assignmentgroup')
             .map(function (items, Assignmentgroup) {
                 const map1 = {};
                 let grandTotal = 0;
@@ -348,10 +437,32 @@ export default function DashboardPage() {
                 map1['GrandTotal'] = grandTotal;
                 return { assignmentgroup: Assignmentgroup, ...map1 };
             }).value();
-
-        let cr_summary = crsummary.map((item, index) =>
-            Object.assign({}, item, { Id: index + 1 })
-        );
+        
+        
+            let resolvedTotal = 0, closedTotal = 0, InProgressTotal = 0, OnHoldTotal = 0, GrandTotal = 0;
+            let cr_summary = crsummary.map(function (item, index) {
+                resolvedTotal += item.Resolved;
+                closedTotal += item.Closed;
+                InProgressTotal += item["In Progress"];
+                OnHoldTotal += item["On Hold"];
+                GrandTotal += item["GrandTotal"];
+                return {Id: index + 1,...item};
+            }
+    
+            );
+            
+            var grandTotalItem = {
+                'assignmentgroup':'Grand Total',
+                'Resolved': resolvedTotal,
+                'In Progress': InProgressTotal,
+                'Closed': closedTotal,
+                'On Hold': OnHoldTotal,
+                "GrandTotal": GrandTotal,
+                Id:cr_summary.length+1
+            };
+            
+            //console.log("grandTotalItem", grandTotalItem);
+            cr_summary.push(grandTotalItem);
 
 
 
@@ -379,7 +490,7 @@ export default function DashboardPage() {
                 <Carousel autoPlay={false} indicators={false} navButtonsAlwaysVisible={false}>
                     <Grid container spacing={3}>
 
-                        <Grid item xs={12} md={6} lg={6}>
+                        <Grid item xs={12} md={12} lg={12}>
                             <Paper
                                 sx={{
                                     p: 2,
@@ -392,9 +503,13 @@ export default function DashboardPage() {
 
                             </Paper>
                             <Box display={'flex'} justifyItems={'center'} justifyContent={'center'} alignItems={'center'}>
-                                <Link to="/teamperformance">Show more</Link>
+                                <Link to="/teamperformance?company=Deloitte">Show more</Link>
                             </Box>
                         </Grid>
+                       
+
+                    </Grid>
+                    <Grid container spacing={3}>
                         <Grid item xs={12} md={6} lg={6}>
                             <Paper
                                 sx={{
@@ -409,12 +524,30 @@ export default function DashboardPage() {
 
                             </Paper>
                             <Box display={'flex'} justifyItems={'center'} justifyContent={'center'} alignItems={'center'}>
-                                <Link to="/amsteamperformance">Show more</Link>
+                                <Link to="/amsteamperformance?company=Deloitte">Show more</Link>
 
 
                             </Box>
                         </Grid>
+                        <Grid item xs={12} md={6} lg={6}>
+                            <Paper
+                                sx={{
+                                    p: 2,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    height: 300
 
+                                }}
+                            >
+                                {!_.isEmpty(deloitteResolvedGraphData) && <Bar options={deloitte_resolved_options} data={deloitteResolvedGraphData} />}
+
+                            </Paper>
+                            <Box display={'flex'} justifyItems={'center'} justifyContent={'center'} alignItems={'center'}>
+                                <Link to="/amsteamperformance?company=Deloitte">Show more</Link>
+
+
+                            </Box>
+                        </Grid>
                     </Grid>
                     <Grid container spacing={3}>
                         <Grid item xs={12} md={6} lg={6}>
@@ -431,7 +564,7 @@ export default function DashboardPage() {
 
                             </Paper>
                             <Box display={'flex'} justifyItems={'center'} justifyContent={'center'} alignItems={'center'}>
-                                <Link to="/amsteamperformance">Show more</Link>
+                                <Link to="/amsteamperformance?company=Avient">Show more</Link>
                             </Box>
                         </Grid>
                         <Grid item xs={12} md={6} lg={6}>
@@ -444,14 +577,13 @@ export default function DashboardPage() {
 
                                 }}
                             >
-                                {!_.isEmpty(ageing0to5Days) && <Pie options={ageing0to5_options} data={ageing0to5Days} />}
+                                {!_.isEmpty(avientResolvedGraphData) && <Bar options={avient_resolved_options} data={avientResolvedGraphData} />}
 
                             </Paper>
                             <Box display={'flex'} justifyItems={'center'} justifyContent={'center'} alignItems={'center'}>
-                                <Link to="/ageingsummary0to5">Show more</Link>
+                                <Link to="/amsteamperformance?company=Avient">Show more</Link>
                             </Box>
                         </Grid>
-
                     </Grid>
                     <Grid container spacing={3}>
                         <Grid item xs={12} md={6} lg={6}>
@@ -481,6 +613,25 @@ export default function DashboardPage() {
 
                                 }}
                             >
+                                {!_.isEmpty(ageing0to5Days) && <Pie options={ageing0to5_options} data={ageing0to5Days} />}
+
+                            </Paper>
+                            <Box display={'flex'} justifyItems={'center'} justifyContent={'center'} alignItems={'center'}>
+                                <Link to="/ageingsummary0to5">Show more</Link>
+                            </Box>
+                        </Grid>
+                    </Grid>
+                    <Grid container spacing={3}>
+                    <Grid item xs={12} md={12} lg={12}>
+                            <Paper
+                                sx={{
+                                    p: 2,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    height: 300
+
+                                }}
+                            >
                                 {!_.isEmpty(ageingMoreThan10Days) && <Pie options={ageingmorethan10_options} data={ageingMoreThan10Days} />}
 
                             </Paper>
@@ -488,7 +639,7 @@ export default function DashboardPage() {
                                 <Link to="/ageingsummarymorethan10">Show more</Link>
                             </Box>
                         </Grid>
-
+                    
                     </Grid>
                 </Carousel>
                 <Grid container spacing={3}>
@@ -498,12 +649,10 @@ export default function DashboardPage() {
                                 <TableHead>
                                     <TableRow>
                                         <StyledTableCell>Assignment Group</StyledTableCell>
-                                        <StyledTableCell align="left">Authorize</StyledTableCell>
                                         <StyledTableCell align="left">Closed</StyledTableCell>
-                                        <StyledTableCell align="left">Implement</StyledTableCell>
-                                        <StyledTableCell align="left">New</StyledTableCell>
-                                        <StyledTableCell align="left">Review</StyledTableCell>
-                                        <StyledTableCell align="left">Scheduled</StyledTableCell>
+                                        <StyledTableCell align="left">In Progress</StyledTableCell>
+                                        <StyledTableCell align="left">Resolved</StyledTableCell>
+                                        <StyledTableCell align="left">On Hold</StyledTableCell>
                                         <StyledTableCell align="left">Grand Total</StyledTableCell>
                                     </TableRow>
                                 </TableHead>
@@ -513,12 +662,10 @@ export default function DashboardPage() {
                                             <StyledTableCell component="th" scope="row">
                                                 {row.assignmentgroup}
                                             </StyledTableCell>
-                                            <StyledTableCell align="left">{row.Authorize}</StyledTableCell>
                                             <StyledTableCell align="left">{row.Closed}</StyledTableCell>
-                                            <StyledTableCell align="left">{row.Implement}</StyledTableCell>
-                                            <StyledTableCell align="left">{row.New}</StyledTableCell>
-                                            <StyledTableCell align="left">{row.Review}</StyledTableCell>
-                                            <StyledTableCell align="left">{row.Scheduled}</StyledTableCell>
+                                            <StyledTableCell align="left">{row["In Progress"]}</StyledTableCell>
+                                            <StyledTableCell align="left">{row.Resolved}</StyledTableCell>
+                                            <StyledTableCell align="left">{row["On Hold"]}</StyledTableCell>
                                             <StyledTableCell align="left">{row.GrandTotal}</StyledTableCell>
 
                                         </StyledTableRow>

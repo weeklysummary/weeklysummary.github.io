@@ -11,6 +11,7 @@ import moment from 'moment'
 import _ from 'lodash';
 import { DataGrid, GridToolbar, gridClasses } from '@mui/x-data-grid';
 import { alpha, styled } from '@mui/material/styles';
+import { useSearchParams } from "react-router-dom";
 
 const ODD_OPACITY = 0.2;
 
@@ -49,6 +50,7 @@ const StripedDataGrid = styled(DataGrid)(({ theme }) => ({
 
 
 export default function AMSTeamPerformancePage() {
+    const [searchParams, setSearchParams] = useSearchParams();
     const dispatch = useDispatch();
     const [AMSTeamPerformance, setAMSTeamPerformance] = useState([]);
     const { loading, errors, list } = useSelector((state) => state.amsteamperformance)
@@ -62,17 +64,33 @@ export default function AMSTeamPerformancePage() {
         let newData = newList.map((item) =>
             Object.assign({}, item, {
                 Month: moment(new Date(item.Opened)).format("MMMM"),
+                OpenedMonth: moment(new Date(item.Opened)).format("MMMM"),
+                ResolvedMonth: moment(new Date(item.Resolved)).format("MMMM"),
                 Ageing: moment(new Date()).diff(new Date(item.Opened), 'days')
             })
         );
+        
         var sortedList = _.sortBy(newData, [function (o) { return new Date(o.Opened); }]);
-        var newStateList = _(sortedList).groupBy('Month')
-            .map(function (items, Month) {
-                let i = items.filter(m => m.Company === "Deloitte");
-                let j = items.filter(m => m.Company === "Avient");
-                return { month: Month, deloitte: i.length, avient: j.length };
-            }).value();
-        setAMSTeamPerformance(newStateList);
+        var sortedResolvedList = _.sortBy(newData, [function (o) { return new Date(o.Resolved); }]);
+
+        var newStateList = _(sortedList).filter(m=>m.Opened!=="" && m.Company===searchParams.get("company")).groupBy('OpenedMonth')
+        .map(function (items, Month) {
+            let i = items.filter(m => m.Opened !== "");
+            return { month: Month, count: i.length };
+        }).value();
+
+        var newStateResolvedList = _(sortedResolvedList).filter(m=>m.Resolved!=="" && m.Company===searchParams.get("company")).groupBy('ResolvedMonth')
+        .map(function (items, Month) {
+            let i = items.filter(m => m.Opened !== "");
+            return { month: Month, count: i.length };
+        }).value();
+
+        var finalList=newStateList.map(function(item,index){
+            var itemIndex=newStateResolvedList.findIndex(m=>m.month===item.month);
+            return {month:item.month,created:item.count,resolved:newStateResolvedList[itemIndex].count};
+        });
+
+        setAMSTeamPerformance(finalList);
 
     }, [list]);
     const columns = [
@@ -80,10 +98,10 @@ export default function AMSTeamPerformancePage() {
             field: 'month', headerName: 'Month', flex: 1, headerClassName: 'super-app-theme--header'
         },
         {
-            field: 'deloitte', headerName: 'Deloitte', flex: 1, headerClassName: 'super-app-theme--header'
+            field: 'created', headerName: 'Created', flex: 1, headerClassName: 'super-app-theme--header'
         },
         {
-            field: 'avient', headerName: 'Avient', flex: 1, headerClassName: 'super-app-theme--header'
+            field: 'resolved', headerName: 'Resolved', flex: 1, headerClassName: 'super-app-theme--header'
         }
     ];
 
@@ -121,7 +139,7 @@ export default function AMSTeamPerformancePage() {
                             }}
                         >
                             <Grid item sx={{ display: 'flex', justifyContent: 'center' }} xs={12} md={12} lg={12}>
-                                <Typography component={"p"} sx={{ fontSize: '25px' }}>{"AMS Team Performance – Priority & Month"}</Typography>
+                                <Typography component={"p"} sx={{ fontSize: '25px' }}>{"Incoming Tickets vs Resolved Tickets – "}{searchParams.get("company")}</Typography>
                             </Grid>
                             <Grid item xs={12} md={12} lg={12}>
                                 <StripedDataGrid sx={{ flex: 1, minHeight: '500px' }} autoHeight={false} getRowClassName={(params) =>

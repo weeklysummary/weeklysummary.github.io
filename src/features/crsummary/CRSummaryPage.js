@@ -11,8 +11,26 @@ import moment from 'moment'
 import _ from 'lodash';
 import { DataGrid, GridToolbar, gridClasses } from '@mui/x-data-grid';
 import { alpha, styled } from '@mui/material/styles';
-
-
+import { Bar, Pie } from 'react-chartjs-2';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
+    ArcElement
+} from 'chart.js';
+ChartJS.register(
+    ArcElement,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend
+);
 const ODD_OPACITY = 0.2;
 
 const StripedDataGrid = styled(DataGrid)(({ theme }) => ({
@@ -48,11 +66,25 @@ const StripedDataGrid = styled(DataGrid)(({ theme }) => ({
     },
 }));
 
+export const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            position: 'top',
+        },
+        title: {
+            display: true,
+            text: 'CR Summary',
+        },
+    },
+};
 export default function CRSummaryPage() {
     const dispatch = useDispatch();
     const [crSummary, setCRSummary] = useState([]);
+    const [graph1Data, setGraph1Data] = useState({});
     const { loading, errors, list } = useSelector((state) => state.crsummary)
- console.log("list3",list);
+    console.log("list3", list);
     useEffect(() => {
         dispatch(getAllData());
     }, [dispatch]);
@@ -70,11 +102,12 @@ export default function CRSummaryPage() {
 
 
     function CRSummary(sortedArray) {
-        var states = sortedArray.map(function (el) { return el.State; });
+        var filteredArray = sortedArray.filter(m => m.Company === "Deloitte");
+        var states = filteredArray.map(function (el) { return el.State; });
         var uniqueStates = _.uniqBy(states, function (e) {
             return e;
         });
-        var crsummary = _(sortedArray).groupBy('Assignmentgroup')
+        var crsummary = _(filteredArray).groupBy('Assignmentgroup')
             .map(function (items, Assignmentgroup) {
                 const map1 = {};
                 let grandTotal = 0;
@@ -87,35 +120,81 @@ export default function CRSummaryPage() {
                 return { assignmentgroup: Assignmentgroup, ...map1 };
             }).value();
 
-        let cr_summary = crsummary.map((item, index) =>
-            Object.assign({}, item, { Id: index + 1 })
+        let resolvedTotal = 0, closedTotal = 0, InProgressTotal = 0, OnHoldTotal = 0, GrandTotal = 0;
+        let cr_summary = crsummary.map(function (item, index) {
+            resolvedTotal += item.Resolved;
+            closedTotal += item.Closed;
+            InProgressTotal += item["In Progress"];
+            OnHoldTotal += item["On Hold"];
+            GrandTotal += item["Grand Total"];
+            let OpendedTickets=item["In Progress"]+item["On Hold"];
+            let ResolvedTickets=item["Resolved"]+item["Closed"];
+            return { Id: index + 1,OpendedTickets:OpendedTickets,ResolvedTickets:ResolvedTickets, ...item };
+        }
+
         );
 
+        var grandTotalItem = {
+            'assignmentgroup': 'Grand Total',
+            'Resolved': resolvedTotal,
+            'In Progress': InProgressTotal,
+            'Closed': closedTotal,
+            'On Hold': OnHoldTotal,
+            "Grand Total": GrandTotal,
+            "OpendedTickets":OnHoldTotal+InProgressTotal,
+            "ResolvedTickets":closedTotal+resolvedTotal,
+             Id: cr_summary.length + 1
+        };
 
-
-
+        cr_summary.push(grandTotalItem);
         setCRSummary(cr_summary);
+        getMonthWiseChartData(cr_summary)
+    }
+
+    function getMonthWiseChartData(sortedArray) {
+
+        
+       
+        var labels = sortedArray.map(function (el) { return el.assignmentgroup; });
+        var opened_data = sortedArray.map(function (el) { return el.OpendedTickets; });
+        var resolved_data = sortedArray.map(function (el) { return el.ResolvedTickets; });
+       
+
+        //var backlog_data = newBacklogList.map(function (el) { return el.count; });
+
+        let graphData = {
+            labels: labels,
+            datasets: [
+                {
+                    label: "Opened",
+                    data: opened_data,
+                    backgroundColor: '#4574C4',
+                },
+                {
+                    label: "Resolved",
+                    data: resolved_data,
+                    backgroundColor: '#92d050',
+                }
+            ]
+        }
+        setGraph1Data(graphData);
     }
     const columns = [
         { field: 'assignmentgroup', headerName: 'Assignment Group', width: 180, headerClassName: 'super-app-theme--header' },
+
         {
-            field: 'Authorize', headerName: 'Authorize',flex:1, headerClassName: 'super-app-theme--header'
+            field: 'Closed', headerName: 'Closed', flex: 1, headerClassName: 'super-app-theme--header'
         },
         {
-            field: 'Closed', headerName: 'Closed',flex:1, headerClassName: 'super-app-theme--header'
+            field: 'In Progress', headerName: 'In Progress', flex: 1, headerClassName: 'super-app-theme--header'
         },
         {
-            field: 'Implement', headerName: 'Implement',flex:1, headerClassName: 'super-app-theme--header'
-        },
-        {
-            field: 'New', headerName: 'New',flex:1, headerClassName: 'super-app-theme--header'
+            field: 'Resolved', headerName: 'Resolved', flex: 1, headerClassName: 'super-app-theme--header'
         }, {
-            field: 'Review', headerName: 'Review',flex:1, headerClassName: 'super-app-theme--header'
-        }, {
-            field: 'Scheduled', headerName: 'Scheduled',flex:1, headerClassName: 'super-app-theme--header'
+            field: 'On Hold', headerName: 'On Hold', flex: 1, headerClassName: 'super-app-theme--header'
         },
         {
-            field: 'Grand Total', headerName: 'Grand Total',flex:1, headerClassName: 'super-app-theme--header'
+            field: 'Grand Total', headerName: 'Grand Total', flex: 1, headerClassName: 'super-app-theme--header'
         }
     ];
     return (
@@ -137,11 +216,12 @@ export default function CRSummaryPage() {
                     {loading && <Typography>{"Loading..."}</Typography>}
                     {errors.length > 0 && <Typography>{errors.toString()}</Typography>}
                     {/* Chart */}
+
                     <Grid item container xs={12} md={12} lg={12}>
                         <Paper
                             sx={{
                                 p: 2,
-                                width:'100%',
+                                width: '100%',
                                 '& .super-app-theme--header': {
                                     backgroundColor: '#000000',
                                     color: '#ffffff'
@@ -151,16 +231,31 @@ export default function CRSummaryPage() {
                                 }
                             }}
                         >
-                            <Grid item sx={{ display: 'flex', justifyContent: 'center' }} xs={12} md={12} lg={12}>
+                            <Grid item sx={{ display: 'flex', justifyContent: 'center',marginBottom:'20px' }} xs={12} md={12} lg={12}>
                                 <Typography component={"p"} sx={{ fontSize: '25px' }}>{"CR Summary"}</Typography>
                             </Grid>
-                            <Grid item xs={12} md={12} lg={12}>
-                            <StripedDataGrid sx={{ flex: 1, minHeight: '500px' }} autoHeight={false} getRowClassName={(params) =>
-                                params.indexRelativeToCurrentPage % 2 === 0 ? 'even' : 'odd'
-                            } getRowId={(row) => row.Id} rows={crSummary} columns={columns} components={{ Toolbar: GridToolbar }} />
+                            <Grid item xs={12} md={12} lg={12} sx={{marginBottom:'20px'}}>
+                                <Paper
+                                    sx={{
+                                        p: 2,
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        height: 300
+                                    }}
+                                >
+                                    {!_.isEmpty(graph1Data) && <Bar options={options} data={graph1Data} />}
+
+                                </Paper>
 
                             </Grid>
-                          
+
+                            <Grid item xs={12} md={12} lg={12}>
+                                <StripedDataGrid sx={{ flex: 1, minHeight: '500px' }} autoHeight={false} getRowClassName={(params) =>
+                                    params.indexRelativeToCurrentPage % 2 === 0 ? 'even' : 'odd'
+                                } getRowId={(row) => row.Id} rows={crSummary} columns={columns} components={{ Toolbar: GridToolbar }} />
+
+                            </Grid>
+
 
                         </Paper>
                     </Grid>

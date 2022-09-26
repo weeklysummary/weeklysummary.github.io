@@ -9,6 +9,7 @@ import { getAllData } from "./dashboardSlice";
 import Box from "@mui/material/Box";
 import moment from 'moment'
 import _ from 'lodash';
+
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -19,6 +20,7 @@ import {
     Legend,
     ArcElement
 } from 'chart.js';
+
 import getRandomColor from "../../common/ColorGenerator";
 import { Bar, Pie } from 'react-chartjs-2';
 import Carousel from 'react-material-ui-carousel'
@@ -30,7 +32,8 @@ import TableCell, { tableCellClasses } from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-
+import axios from 'axios';
+import annotationPlugin from 'chartjs-plugin-annotation';
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
     [`&.${tableCellClasses.head}`]: {
@@ -59,22 +62,11 @@ ChartJS.register(
     BarElement,
     Title,
     Tooltip,
-    Legend
+    Legend,
+    annotationPlugin
 );
 
-export const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: {
-            position: 'top',
-        },
-        title: {
-            display: true,
-            text: 'Deloitte Monthly Created Vs Resolved',
-        },
-    },
-};
+
 export const deloitte_options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -171,6 +163,8 @@ export default function DashboardPage() {
     const dispatch = useDispatch();
     const [dataList, setDataList] = useState([]);
     const [graph1Data, setGraph1Data] = useState({});
+    const [graph1Options, setGraph1Options] = useState({});
+
     const [deloitteGraphData, setDeloitteGraphData] = useState({});
     const [deloitteResolvedGraphData, setDeloitteResolvedGraphData] = useState({});
     const [avientGraphData, setAvientGraphData] = useState({});
@@ -189,6 +183,7 @@ export default function DashboardPage() {
     }, [dispatch]);
 
     useEffect(() => {
+        
         let newList = list;
         let newData = newList.map((item) =>
             Object.assign({}, item, {
@@ -283,6 +278,9 @@ export default function DashboardPage() {
     }
 
     function getMonthWiseChartData(sortedArray) {
+
+        
+
         var newStateList = _(sortedArray).filter(m => m.Opened !== "" && m.Company === "Deloitte").groupBy('OpenedMonth')
             .map(function (items, OpenedMonth) {
                 let i = items.filter(m => m.Opened !== "");
@@ -296,16 +294,47 @@ export default function DashboardPage() {
                 return { month: ResolvedMonth, count: i.length };
             }).value();
 
-        // var newBacklogList = _(sortedArray).filter(m => (m.Opened !== "" && m.Resolved==="") && m.Company === "Deloitte").groupBy('OpenedMonth')
-        //     .map(function (items, OpenedMonth) {
-        //         let i = items;
-        //         return { month: OpenedMonth, count: i.length };
-        //     }).value();
+        var newBacklogList = _(sortedArray).filter(m => (m.Opened !== "" && m.Resolved==="") && m.Company === "Deloitte").groupBy('OpenedMonth')
+            .map(function (items, OpenedMonth) {
+                let i = items;
+                return { month: OpenedMonth, count: i.length };
+            }).value();
+        console.log("newBacklogList",newBacklogList);    
 
         var labels = closedStateList.map(function (el) { return el.month; });
         var new_data = newStateList.map(function (el) { return el.count; });
         var closed_data = closedStateList.map(function (el) { return el.count; });
-        //var backlog_data = newBacklogList.map(function (el) { return el.count; });
+        var backlog_data = newBacklogList.map(function (el) { return el.count; });
+
+
+        let graph1_options = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: 'Deloitte Monthly Created Vs Resolved',
+                },
+                annotation: {
+                    annotations: {
+                      line1: {
+                        type: 'line',
+                        yMin: _.min(backlog_data),
+                        yMax: _.max(backlog_data),
+                        borderColor: '#843c0c',
+                        borderWidth: 2,
+                      }
+                    }
+                  }
+            }
+            
+        };
+        setGraph1Options(graph1_options);
+
+
 
         let graphData = {
             labels: labels,
@@ -319,6 +348,11 @@ export default function DashboardPage() {
                     label: "Resolved",
                     data: closed_data,
                     backgroundColor: '#92d050',
+                },
+                {
+                    label: "Backlog",
+                    data: backlog_data,
+                    backgroundColor: '#843c0c',
                 }
             ]
         }
@@ -499,7 +533,7 @@ export default function DashboardPage() {
                                     height: 300
                                 }}
                             >
-                                {!_.isEmpty(graph1Data) && <Bar options={options} data={graph1Data} />}
+                                {!_.isEmpty(graph1Data) && <Bar options={graph1Options} data={graph1Data} />}
 
                             </Paper>
                             <Box display={'flex'} justifyItems={'center'} justifyContent={'center'} alignItems={'center'}>
